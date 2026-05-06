@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>지점 업무 관리</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f11;
+    --bg2: #16161a;
+    --bg3: #1e1e24;
+    --bg4: #26262e;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f2;
+    --text2: #9090a0;
+    --text3: #5a5a6a;
+    --accent: #7c6aff;
+    --accent2: #a594ff;
+    --green: #3ecf8e;
+    --amber: #f5a623;
+    --red: #ff5e5e;
+    --blue: #4a9eff;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* LAYOUT */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; min-height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+  .main { margin-left: 220px; flex: 1; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 15px; font-weight: 700;
+    color: var(--text); letter-spacing: -0.3px;
+  }
+  .logo span { color: var(--accent2); }
+  .sidebar-section-label {
+    font-size: 10px; font-weight: 500; color: var(--text3);
+    letter-spacing: 1.2px; text-transform: uppercase;
+    padding: 16px 20px 6px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px; cursor: pointer;
+    color: var(--text2); font-size: 13px;
+    transition: all .15s; border-radius: 0;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active {
+    color: var(--accent2);
+    background: rgba(124,106,255,0.1);
+    border-left-color: var(--accent);
+  }
+  .nav-item .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text3); flex-shrink: 0;
+  }
+  .nav-item.active .dot { background: var(--accent2); }
+  .nav-badge {
+    margin-left: auto; background: var(--red);
+    color: white; font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 20px; min-width: 18px;
+    text-align: center;
+  }
+  .nav-badge.zero { background: var(--bg4); color: var(--text3); }
+  .sidebar-footer {
+    margin-top: auto; padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .btn-add-branch {
+    width: 100%; padding: 8px;
+    background: rgba(124,106,255,0.15);
+    border: 1px solid rgba(124,106,255,0.3);
+    border-radius: var(--radius); color: var(--accent2);
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    transition: all .15s;
+  }
+  .btn-add-branch:hover { background: rgba(124,106,255,0.25); }
+
+  /* HEADER */
+  .page-header {
+    padding: 28px 32px 0;
+    display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .page-sub { color: var(--text2); font-size: 13px; margin-top: 4px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; padding: 24px 32px 0;
+  }
+  .stat-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px 20px;
+  }
+  .stat-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .8px; }
+  .stat-value { font-size: 28px; font-weight: 700; margin-top: 6px; font-family: 'DM Mono', monospace; }
+  .stat-value.red { color: var(--red); }
+  .stat-value.amber { color: var(--amber); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.blue { color: var(--blue); }
+
+  /* CONTENT */
+  .content { padding: 24px 32px; }
+
+  /* FILTERS */
+  .filters {
+    display: flex; gap: 10px; margin-bottom: 20px;
+    flex-wrap: wrap; align-items: center;
+  }
+  .filter-select, .filter-input {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); color: var(--text);
+    font-size: 13px; padding: 8px 12px;
+    font-family: inherit; cursor: pointer;
+    transition: border-color .15s;
+  }
+  .filter-select:focus, .filter-input:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .filter-input { min-width: 200px; }
+
+  /* TABLE */
+  .table-wrap {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { border-bottom: 1px solid var(--border2); }
+  th {
+    padding: 12px 14px; text-align: left;
+    font-size: 11px; font-weight: 500;
+    color: var(--text3); text-transform: uppercase;
+    letter-spacing: .8px; white-space: nowrap;
+    background: var(--bg3);
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 500; white-space: nowrap;
+  }
+  .badge-wait { background: rgba(245,166,35,0.15); color: var(--amber); border: 1px solid rgba(245,166,35,0.25); }
+  .badge-done { background: rgba(62,207,142,0.12); color: var(--green); border: 1px solid rgba(62,207,142,0.2); }
+  .badge-type {
+    background: rgba(74,158,255,0.1); color: var(--blue);
+    border: 1px solid rgba(74,158,255,0.2);
+    font-size: 10px; padding: 2px 8px;
+  }
+  .badge-branch {
+    background: rgba(124,106,255,0.1); color: var(--accent2);
+    border: 1px solid rgba(124,106,255,0.2);
+    font-size: 10px; padding: 2px 8px;
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    font-family: inherit; transition: all .15s; border: none;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-primary {
+    background: var(--accent); color: white;
+  }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost {
+    background: transparent; color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: var(--bg3); }
+  .btn-danger { background: rgba(255,94,94,0.15); color: var(--red); border: 1px solid rgba(255,94,94,0.2); }
+  .btn-danger:hover { background: rgba(255,94,94,0.25); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-icon { padding: 6px; background: transparent; border: 1px solid var(--border2); border-radius: 6px; color: var(--text2); cursor: pointer; font-size: 14px; transition: all .15s; }
+  .btn-icon:hover { color: var(--text); background: var(--bg3); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius-lg); padding: 28px;
+    width: 580px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    transform: translateY(16px); transition: transform .2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .6px; }
+  .form-input, .form-select, .form-textarea {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: var(--radius); color: var(--text);
+    font-size: 13px; padding: 9px 12px;
+    font-family: inherit; transition: border-color .15s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none; border-color: var(--accent);
+  }
+  .form-textarea { min-height: 80px; resize: vertical; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+  /* AI PARSE SECTION */
+  .ai-section {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;
+  }
+  .ai-section-title {
+    font-size: 12px; font-weight: 600; color: var(--accent2);
+    text-transform: uppercase; letter-spacing: .8px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ai-textarea {
+    width: 100%; min-height: 100px; resize: vertical;
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: var(--radius); color: var(--text);
+    font-size: 13px; padding: 10px 12px; font-family: inherit;
+  }
+  .ai-textarea:focus { outline: none; border-color: var(--accent); }
+
+  /* LOADING */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; color: var(--text2); gap: 10px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--text3);
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* TOAST */
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+  .toast {
+    background: var(--bg3); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 18px;
+    font-size: 13px; color: var(--text);
+    animation: slideIn .2s ease; min-width: 200px;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* INLINE EDIT */
+  .editable { cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color .15s; }
+  .editable:hover { border-bottom-color: var(--text3); }
+
+  /* OVERVIEW CARDS */
+  .branch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .branch-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 18px 20px;
+    cursor: pointer; transition: all .15s;
+  }
+  .branch-card:hover { border-color: var(--border2); background: var(--bg3); }
+  .branch-card-name { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .branch-card-stats { display: flex; gap: 12px; }
+  .branch-stat { font-size: 12px; }
+  .branch-stat span { font-weight: 700; font-family: 'DM Mono', monospace; }
+  .branch-stat .w { color: var(--amber); }
+  .branch-stat .d { color: var(--green); }
+
+  /* DATE */
+  .date-text { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3); }
+  .summary-text { max-width: 240px; line-height: 1.5; }
+  .executor-input {
+    background: transparent; border: none; border-bottom: 1px dashed var(--accent);
+    color: var(--accent2); font-size: 12px; font-family: inherit;
+    padding: 2px 4px; min-width: 80px; width: 100%;
+  }
+  .executor-input:focus { outline: none; }
+  .executor-input::placeholder { color: var(--text3); }
+
+  /* SECTION TAB */
+  .view-tabs { display: flex; gap: 2px; background: var(--bg3); border-radius: var(--radius); padding: 3px; margin-bottom: 20px; width: fit-content; }
+  .view-tab { padding: 7px 16px; border-radius: 7px; font-size: 13px; cursor: pointer; color: var(--text2); transition: all .15s; }
+  .view-tab.active { background: var(--bg2); color: var(--text); font-weight: 500; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    .sidebar { width: 100%; min-height: auto; position: relative; }
+    .main { margin-left: 0; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Task<span>Share</span></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">피부과 업무 관리</div>
+    </div>
+    <div class="sidebar-section-label">메뉴</div>
+    <div class="nav-item active" onclick="showPage('overview')" id="nav-overview">
+      <div class="dot"></div> 전체 현황
+    </div>
+    <div class="sidebar-section-label">지점</div>
+    <div id="branch-nav-list"></div>
+    <div class="sidebar-footer">
+      <button class="btn-add-branch" onclick="openAddBranchModal()">+ 지점 추가</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- OVERVIEW PAGE -->
+    <div id="page-overview">
+      <div class="page-header">
+        <div>
+          <div class="page-title">전체 현황</div>
+          <div class="page-sub">모든 지점의 업무 현황을 한눈에</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻ 새로고침</button>
+        </div>
+      </div>
+      <div class="stats-row" id="overview-stats">
+        <div class="stat-card"><div class="stat-label">전체 대기</div><div class="stat-value red" id="stat-total-wait">—</div></div>
+        <div class="stat-card"><div class="stat-label">오늘 추가</div><div class="stat-value blue" id="stat-today">—</div></div>
+        <div class="stat-card"><div class="stat-label">전체 완료</div><div class="stat-value green" id="stat-total-done">—</div></div>
+        <div class="stat-card"><div class="stat-label">활성 지점</div><div class="stat-value amber" id="stat-branches">—</div></div>
+      </div>
+      <div class="content">
+        <div class="view-tabs">
+          <div class="view-tab active" onclick="switchOverviewView('cards',this)">지점별 카드</div>
+          <div class="view-tab" onclick="switchOverviewView('table',this)">대기 업무 목록</div>
+        </div>
+        <div id="overview-cards-view">
+          <div class="branch-cards" id="branch-cards-grid"></div>
+        </div>
+        <div id="overview-table-view" style="display:none">
+          <div class="filters">
+            <select class="filter-select" id="filter-type-ov" onchange="renderOverviewTable()">
+              <option value="">전체 유형</option>
+              <option>디자인/콘텐츠</option><option>마케팅/광고</option>
+              <option>SNS 관리</option><option>행정/문서</option>
+              <option>시술 관련</option><option>고객 응대</option><option>기타</option>
+            </select>
+            <input class="filter-input" placeholder="검색..." id="filter-search-ov" oninput="renderOverviewTable()">
+          </div>
+          <div class="table-wrap"><div id="overview-table-container"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRANCH PAGE -->
+    <div id="page-branch" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="branch-page-title">지점명</div>
+          <div class="page-sub" id="branch-page-sub"></div>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="loadBranchTasks(currentBranch)">↻ 새로고침</button>
+          <button class="btn btn-primary btn-sm" onclick="openAddTaskModal()">+ 업무 추가</button>
+          <button class="btn btn-ghost btn-sm" onclick="openAiModal()">✦ 카톡 분석</button>
+        </div>
+      </div>
+      <div class="stats-row" id="branch-stats-row">
+        <div class="stat-card"><div class="stat-label">대기 중</div><div class="stat-value red" id="bstat-wait">—</div></div>
+        <div class="stat-card"><div class="stat-label">완료</div><div class="stat-value green" id="bstat-done">—</div></div>
+        <div class="stat-card"><div class="stat-label">전체</div><div class="stat-value blue" id="bstat-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">이번 주</div><div class="stat-value amber" id="bstat-week">—</div></div>
+      </div>
+      <div class="content">
+        <div class="filters">
+          <select class="filter-select" id="filter-status" onchange="renderBranchTable()">
+            <option value="">전체 상태</option>
+            <option value="대기">대기</option>
+            <option value="완료">완료</option>
+          </select>
+          <select class="filter-select" id="filter-type" onchange="renderBranchTable()">
+            <option value="">전체 유형</option>
+            <option>디자인/콘텐츠</option><option>마케팅/광고</option>
+            <option>SNS 관리</option><option>행정/문서</option>
+            <option>시술 관련</option><option>고객 응대</option><option>기타</option>
+          </select>
+          <input class="filter-input" placeholder="검색..." id="filter-search" oninput="renderBranchTable()">
+        </div>
+        <div class="table-wrap">
+          <div id="branch-table-container"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- ADD TASK MODAL -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-title" id="modal-task-title">업무 추가</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">날짜</label>
+        <input class="form-input" type="date" id="f-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">지점</label>
+        <select class="form-select" id="f-branch"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">요청 유형</label>
+        <select class="form-select" id="f-type">
+          <option>디자인/콘텐츠</option><option>마케팅/광고</option>
+          <option>SNS 관리</option><option>행정/문서</option>
+          <option>시술 관련</option><option>고객 응대</option><option>기타</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">상태</label>
+        <select class="form-select" id="f-status">
+          <option>대기</option><option>완료</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">내용 요약</label>
+        <textarea class="form-textarea" id="f-summary" placeholder="업무 내용을 입력하세요"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">담당자</label>
+        <input class="form-input" id="f-assignee" placeholder="담당자 이름">
+      </div>
+      <div class="form-group">
+        <label class="form-label">마감기한</label>
+        <input class="form-input" type="date" id="f-deadline">
+      </div>
+      <div class="form-group">
+        <label class="form-label">요청자</label>
+        <input class="form-input" id="f-requester" placeholder="요청자 이름">
+      </div>
+      <div class="form-group">
+        <label class="form-label">실제 실행자 <span style="color:var(--text3);font-size:10px">(완료 후 입력)</span></label>
+        <input class="form-input" id="f-executor" placeholder="실행자 이름">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-task')">취소</button>
+      <button class="btn btn-primary" onclick="saveTask()" id="btn-save-task">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI MODAL -->
+<div class="modal-overlay" id="modal-ai">
+  <div class="modal" style="width:640px">
+    <div class="modal-title">✦ 카카오톡 대화 분석</div>
+    <div class="ai-section">
+      <div class="ai-section-title">✦ 대화 붙여넣기</div>
+      <textarea class="ai-textarea" id="ai-chat-input" placeholder="카카오톡 대화를 여기에 붙여넣으세요..."></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary btn-sm" onclick="analyzeChat()" id="btn-analyze">✦ AI 분석</button>
+        <span style="font-size:12px;color:var(--text3)" id="ai-status"></span>
+      </div>
+    </div>
+    <div id="ai-preview"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ai')">닫기</button>
+      <button class="btn btn-primary" id="btn-save-ai" onclick="saveAiTasks()" style="display:none">저장 (<span id="ai-count">0</span>건)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BRANCH MODAL -->
+<div class="modal-overlay" id="modal-branch">
+  <div class="modal" style="width:380px">
+    <div class="modal-title">지점 추가</div>
+    <div class="form-group">
+      <label class="form-label">지점명</label>
+      <input class="form-input" id="f-branch-name" placeholder="예: 강남점">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-branch')">취소</button>
+      <button class="btn btn-primary" onclick="saveBranch()">추가</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbwgfFzuMreHsFrtL9R5Qf0S9_8015d8duCp5nN0G33511t8xww5-p6DGHtSgx-FVeF1/exec';
+
+let allTasks = [];
+let branches = [];
+let currentBranch = null;
+let editingTaskId = null;
+let pendingAiTasks = [];
+
+// API - all GET
+async function api(action, data = {}) {
+  const clean = Object.fromEntries(Object.entries(data).map(([k,v])=>[k,String(v??'')]));
+  const params = new URLSearchParams({ action, ...clean });
+  const res = await fetch(`${API_URL}?${params}`);
+  return res.json();
+}
+
+async function apiPost(action, data = {}) {
+  return api(action, data);
+}
+
+// INIT
+async function loadAll() {
+  const [tasksRes, branchesRes] = await Promise.all([
+    api('getTasks', {}),
+    api('getBranches')
+  ]);
+  allTasks = tasksRes.tasks || [];
+  branches = branchesRes.branches || [];
+  renderSidebar();
+  renderOverview();
+}
+
+function renderSidebar() {
+  const list = document.getElementById('branch-nav-list');
+  const waitCounts = {};
+  allTasks.filter(t => t.status === '대기').forEach(t => {
+    waitCounts[t.branch] = (waitCounts[t.branch] || 0) + 1;
+  });
+  list.innerHTML = branches.map(b => {
+    const cnt = waitCounts[b.name] || 0;
+    return `<div class="nav-item" id="nav-${b.id}" onclick="showBranch('${b.name}','${b.id}')">
+      <div class="dot"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.name}</span>
+      <span class="nav-badge ${cnt===0?'zero':''}">${cnt}</span>
+    </div>`;
+  }).join('');
+}
+
+// OVERVIEW
+function renderOverview() {
+  const waiting = allTasks.filter(t => t.status === '대기');
+  const done = allTasks.filter(t => t.status === '완료');
+  const today = new Date().toISOString().slice(0,10);
+  const todayTasks = allTasks.filter(t => (t.createdAt||'').slice(0,10) === today);
+
+  document.getElementById('stat-total-wait').textContent = waiting.length;
+  document.getElementById('stat-today').textContent = todayTasks.length;
+  document.getElementById('stat-total-done').textContent = done.length;
+  document.getElementById('stat-branches').textContent = branches.length;
+
+  // Branch cards
+  const grid = document.getElementById('branch-cards-grid');
+  if (branches.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">🏥</div><div class="empty-text">지점을 추가해주세요</div></div>`;
+    return;
+  }
+  grid.innerHTML = branches.map(b => {
+    const btasks = allTasks.filter(t => t.branch === b.name);
+    const bwait = btasks.filter(t => t.status === '대기').length;
+    const bdone = btasks.filter(t => t.status === '완료').length;
+    return `<div class="branch-card" onclick="showBranch('${b.name}','${b.id}')">
+      <div class="branch-card-name">${b.name}</div>
+      <div class="branch-card-stats">
+        <div class="branch-stat">대기 <span class="w">${bwait}</span></div>
+        <div class="branch-stat">완료 <span class="d">${bdone}</span></div>
+        <div class="branch-stat">전체 <span>${btasks.length}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  renderOverviewTable();
+}
+
+function renderOverviewTable() {
+  const typeF = document.getElementById('filter-type-ov').value;
+  const searchF = document.getElementById('filter-search-ov').value.toLowerCase();
+  let tasks = allTasks.filter(t => t.status === '대기');
+  if (typeF) tasks = tasks.filter(t => t.type === typeF);
+  if (searchF) tasks = tasks.filter(t =>
+    (t.summary||'').toLowerCase().includes(searchF) ||
+    (t.branch||'').toLowerCase().includes(searchF) ||
+    (t.requester||'').toLowerCase().includes(searchF)
+  );
+  const container = document.getElementById('overview-table-container');
+  container.innerHTML = renderTable(tasks, true);
+}
+
+function switchOverviewView(view, el) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('overview-cards-view').style.display = view === 'cards' ? '' : 'none';
+  document.getElementById('overview-table-view').style.display = view === 'table' ? '' : 'none';
+}
+
+// BRANCH PAGE
+function showBranch(name, id) {
+  currentBranch = name;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`nav-${id}`)?.classList.add('active');
+  document.getElementById('nav-overview').classList.remove('active');
+  document.getElementById('page-overview').style.display = 'none';
+  document.getElementById('page-branch').style.display = '';
+  document.getElementById('branch-page-title').textContent = name;
+  loadBranchTasks(name);
+}
+
+function showPage(page) {
+  document.getElementById('page-overview').style.display = page === 'overview' ? '' : 'none';
+  document.getElementById('page-branch').style.display = page === 'branch' ? '' : 'none';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (page === 'overview') document.getElementById('nav-overview').classList.add('active');
+  loadAll();
+}
+
+async function loadBranchTasks(branch) {
+  document.getElementById('branch-table-container').innerHTML = `<div class="loading"><div class="spinner"></div> 불러오는 중...</div>`;
+  const res = await api('getTasks', { branch });
+  const tasks = res.tasks || [];
+  // update allTasks for this branch
+  allTasks = allTasks.filter(t => t.branch !== branch).concat(tasks);
+
+  const wait = tasks.filter(t => t.status === '대기').length;
+  const done = tasks.filter(t => t.status === '완료').length;
+  const week = tasks.filter(t => {
+    const d = new Date(t.createdAt||'');
+    const now = new Date();
+    return (now - d) < 7*24*60*60*1000;
+  }).length;
+  document.getElementById('bstat-wait').textContent = wait;
+  document.getElementById('bstat-done').textContent = done;
+  document.getElementById('bstat-total').textContent = tasks.length;
+  document.getElementById('bstat-week').textContent = week;
+  document.getElementById('branch-page-sub').textContent = `대기 ${wait}건 · 완료 ${done}건`;
+
+  renderBranchTable();
+  renderSidebar();
+}
+
+function renderBranchTable() {
+  const statusF = document.getElementById('filter-status').value;
+  const typeF = document.getElementById('filter-type').value;
+  const searchF = document.getElementById('filter-search').value.toLowerCase();
+  let tasks = allTasks.filter(t => t.branch === currentBranch);
+  if (statusF) tasks = tasks.filter(t => t.status === statusF);
+  if (typeF) tasks = tasks.filter(t => t.type === typeF);
+  if (searchF) tasks = tasks.filter(t =>
+    (t.summary||'').toLowerCase().includes(searchF) ||
+    (t.requester||'').toLowerCase().includes(searchF) ||
+    (t.assignee||'').toLowerCase().includes(searchF)
+  );
+  document.getElementById('branch-table-container').innerHTML = renderTable(tasks, false);
+}
+
+function renderTable(tasks, showBranch) {
+  if (tasks.length === 0) {
+    return `<div class="empty"><div class="empty-icon">✓</div><div class="empty-text">업무가 없습니다</div></div>`;
+  }
+  return `<table>
+    <thead><tr>
+      <th>날짜</th>
+      ${showBranch ? '<th>지점</th>' : ''}
+      <th>유형</th>
+      <th>내용</th>
+      <th>상태</th>
+      <th>담당자</th>
+      <th>마감기한</th>
+      <th>실제 실행자</th>
+      <th>요청자</th>
+      <th></th>
+    </tr></thead>
+    <tbody>
+      ${tasks.map(t => `
+        <tr>
+          <td class="date-text">${t.date||''}</td>
+          ${showBranch ? `<td><span class="badge badge-branch">${t.branch||''}</span></td>` : ''}
+          <td><span class="badge badge-type">${t.type||''}</span></td>
+          <td class="summary-text">${t.summary||''}</td>
+          <td>
+            <select class="filter-select" style="padding:4px 8px;font-size:11px" onchange="quickUpdateStatus('${t.id}',this.value)">
+              <option ${t.status==='대기'?'selected':''}>대기</option>
+              <option ${t.status==='완료'?'selected':''}>완료</option>
+            </select>
+          </td>
+          <td style="color:var(--text2)">${t.assignee||'—'}</td>
+          <td class="date-text">${t.deadline||'—'}</td>
+          <td><input class="executor-input" value="${t.executor||''}" placeholder="입력" onchange="quickUpdateExecutor('${t.id}',this.value)"></td>
+          <td style="color:var(--text2)">${t.requester||'—'}</td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="btn-icon" onclick="editTask('${t.id}')" title="수정">✎</button>
+              <button class="btn-icon" onclick="deleteTask('${t.id}')" title="삭제" style="color:var(--red)">✕</button>
+            </div>
+          </td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>`;
+}
+
+// QUICK UPDATES
+async function quickUpdateStatus(id, status) {
+  await apiPost('updateTask', { id, status });
+  toast(status === '완료' ? '✓ 완료 처리됐습니다' : '대기로 변경됐습니다', 'success');
+  const task = allTasks.find(t => t.id.toString() === id.toString());
+  if (task) task.status = status;
+  renderSidebar();
+  if (currentBranch) renderBranchTable();
+  else renderOverviewTable();
+}
+
+async function quickUpdateExecutor(id, executor) {
+  await apiPost('updateTask', { id, executor });
+  const task = allTasks.find(t => t.id.toString() === id.toString());
+  if (task) task.executor = executor;
+  toast('실행자 저장됐습니다', 'success');
+}
+
+// TASK MODAL
+function openAddTaskModal() {
+  editingTaskId = null;
+  document.getElementById('modal-task-title').textContent = '업무 추가';
+  document.getElementById('btn-save-task').textContent = '저장';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f-summary').value = '';
+  document.getElementById('f-assignee').value = '';
+  document.getElementById('f-deadline').value = '';
+  document.getElementById('f-requester').value = '';
+  document.getElementById('f-executor').value = '';
+  document.getElementById('f-status').value = '대기';
+  populateBranchSelect('f-branch', currentBranch);
+  openModal('modal-task');
+}
+
+function editTask(id) {
+  const t = allTasks.find(t => t.id.toString() === id.toString());
+  if (!t) return;
+  editingTaskId = id;
+  document.getElementById('modal-task-title').textContent = '업무 수정';
+  document.getElementById('btn-save-task').textContent = '수정 저장';
+  document.getElementById('f-date').value = t.date || '';
+  document.getElementById('f-summary').value = t.summary || '';
+  document.getElementById('f-assignee').value = t.assignee || '';
+  document.getElementById('f-deadline').value = t.deadline || '';
+  document.getElementById('f-requester').value = t.requester || '';
+  document.getElementById('f-executor').value = t.executor || '';
+  document.getElementById('f-status').value = t.status || '대기';
+  document.getElementById('f-type').value = t.type || '기타';
+  populateBranchSelect('f-branch', t.branch);
+  openModal('modal-task');
+}
+
+function populateBranchSelect(id, selected) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = branches.map(b => `<option ${b.name===selected?'selected':''}>${b.name}</option>`).join('');
+}
+
+async function saveTask() {
+  const data = {
+    date: document.getElementById('f-date').value,
+    branch: document.getElementById('f-branch').value,
+    type: document.getElementById('f-type').value,
+    summary: document.getElementById('f-summary').value,
+    status: document.getElementById('f-status').value,
+    assignee: document.getElementById('f-assignee').value,
+    deadline: document.getElementById('f-deadline').value,
+    requester: document.getElementById('f-requester').value,
+    executor: document.getElementById('f-executor').value,
+  };
+  if (!data.summary.trim()) { toast('내용을 입력해주세요', 'error'); return; }
+  const btn = document.getElementById('btn-save-task');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  if (editingTaskId) {
+    await apiPost('updateTask', { id: editingTaskId, ...data });
+    toast('✓ 수정됐습니다', 'success');
+  } else {
+    await apiPost('addTask', data);
+    toast('✓ 업무가 추가됐습니다', 'success');
+  }
+  btn.disabled = false;
+  closeModal('modal-task');
+  if (currentBranch) loadBranchTasks(currentBranch);
+  else loadAll();
+}
+
+async function deleteTask(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  await apiPost('deleteTask', { id });
+  toast('삭제됐습니다', 'success');
+  allTasks = allTasks.filter(t => t.id.toString() !== id.toString());
+  if (currentBranch) renderBranchTable();
+  else renderOverviewTable();
+  renderSidebar();
+}
+
+// BRANCH
+function openAddBranchModal() {
+  document.getElementById('f-branch-name').value = '';
+  openModal('modal-branch');
+}
+
+async function saveBranch() {
+  const name = document.getElementById("f-branch-name").value.trim();
+  if (!name) { toast("지점명을 입력해주세요", "error"); return; }
+  try {
+    const url = API_URL + "?action=addBranch&name=" + encodeURIComponent(name);
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    toast("✓ " + name + " 추가됐습니다", "success");
+    closeModal("modal-branch");
+    loadAll();
+  } catch(e) {
+    toast("저장 실패: " + e.message, "error");
+  }
+}
+
+// AI ANALYSIS
+function openAiModal() {
+  document.getElementById('ai-chat-input').value = '';
+  document.getElementById('ai-preview').innerHTML = '';
+  document.getElementById('ai-status').textContent = '';
+  document.getElementById('btn-save-ai').style.display = 'none';
+  pendingAiTasks = [];
+  openModal('modal-ai');
+}
+
+async function analyzeChat() {
+  const text = document.getElementById('ai-chat-input').value.trim();
+  if (!text) { toast('대화를 입력해주세요', 'error'); return; }
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true; btn.textContent = '분석 중...';
+  document.getElementById('ai-status').textContent = 'AI가 분석하고 있습니다...';
+
+  const prompt = `다음 카카오톡 대화에서 업무 요청사항을 모두 추출해서 JSON 배열로만 반환하세요. 다른 설명 없이 순수 JSON만 반환하세요.
+각 항목: {"date":"YYYY.MM.DD","branch":"지점명(없으면 빈문자열)","type":"디자인/콘텐츠|마케팅/광고|SNS 관리|행정/문서|시술 관련|고객 응대|기타","summary":"내용요약","status":"대기","assignee":"","deadline":"","requester":"요청자이름"}
+대화: ${text}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+    });
+    const data = await res.json();
+    const content = data.content?.map(c => c.text || '').join('');
+    const clean = content.replace(/```json|```/g, '').trim();
+    pendingAiTasks = JSON.parse(clean);
+    if (!Array.isArray(pendingAiTasks) || pendingAiTasks.length === 0) throw new Error('no tasks');
+
+    // Set branch if on branch page
+    if (currentBranch) pendingAiTasks = pendingAiTasks.map(t => ({ ...t, branch: t.branch || currentBranch }));
+
+    document.getElementById('ai-status').textContent = `${pendingAiTasks.length}건 발견`;
+    document.getElementById('ai-count').textContent = pendingAiTasks.length;
+    document.getElementById('btn-save-ai').style.display = '';
+
+    document.getElementById('ai-preview').innerHTML = `
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">추출된 업무 (저장 전 확인)</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${pendingAiTasks.map((t,i) => `
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <span class="badge badge-type">${t.type}</span>
+              ${t.branch ? `<span class="badge badge-branch">${t.branch}</span>` : ''}
+              <span class="badge badge-wait">대기</span>
+            </div>
+            <div style="font-size:13px">${t.summary}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px">${t.date||''} ${t.requester ? '· 요청자: '+t.requester : ''} ${t.deadline ? '· 마감: '+t.deadline : ''}</div>
+          </div>
+        `).join('')}
+      </div>`;
+  } catch(e) {
+    document.getElementById('ai-status').textContent = '분석 실패. 다시 시도해주세요.';
+  }
+  btn.disabled = false; btn.textContent = '✦ AI 분석';
+}
+
+async function saveAiTasks() {
+  const btn = document.getElementById('btn-save-ai');
+  btn.disabled = true; btn.textContent = '저장 중...';
+  for (const t of pendingAiTasks) {
+    await apiPost('addTask', t);
+  }
+  toast(`✓ ${pendingAiTasks.length}건 저장됐습니다`, 'success');
+  closeModal('modal-ai');
+  if (currentBranch) loadBranchTasks(currentBranch);
+  else loadAll();
+  btn.disabled = false;
+}
+
+// MODAL HELPERS
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// TOAST
+function toast(msg, type = 'success') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// INIT
+loadAll();
+</script>
+</body>
+</html>
